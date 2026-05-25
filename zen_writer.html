@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Генератор статей Яндекс.Дзен — intrelocations.ru</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #22263a;
+    --border: #2e3250;
+    --accent: #5b7fff;
+    --accent2: #7c5cff;
+    --green: #3ecf8e;
+    --yellow: #f5a623;
+    --red: #ff5470;
+    --text: #e8eaf6;
+    --muted: #7b82a8;
+    --r: 12px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', -apple-system, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; line-height: 1.6; }
+  .container { max-width: 880px; margin: 0 auto; padding: 40px 20px 80px; }
+
+  /* Header */
+  .header { text-align: center; margin-bottom: 44px; }
+  .logo { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 16px; }
+  .logo-dot { width: 7px; height: 7px; background: var(--accent); border-radius: 50%; }
+  .badge { display: inline-block; background: var(--surface2); border: 1px solid var(--border); border-radius: 20px; padding: 4px 14px; font-size: 12px; color: var(--accent); margin-bottom: 14px; }
+  h1 { font-size: clamp(20px, 4vw, 30px); font-weight: 700; background: linear-gradient(135deg, #fff 0%, var(--accent) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 8px; }
+  .subtitle { color: var(--muted); font-size: 14px; }
+
+  /* API key section */
+  .apikey-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 20px 24px; margin-bottom: 20px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .apikey-card label { font-size: 13px; color: var(--muted); white-space: nowrap; }
+  .apikey-card input { flex: 1; min-width: 200px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 8px 14px; font-size: 13px; color: var(--text); outline: none; font-family: monospace; }
+  .apikey-card input:focus { border-color: var(--accent); }
+  .btn-save { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 8px 18px; font-size: 13px; color: var(--text); cursor: pointer; font-family: inherit; white-space: nowrap; }
+  .btn-save:hover { border-color: var(--accent); color: var(--accent); }
+  .key-status { font-size: 12px; color: var(--green); display: none; }
+  .key-status.visible { display: block; }
+
+  /* Input card */
+  .input-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 24px; margin-bottom: 28px; }
+  .input-label { font-size: 14px; font-weight: 600; margin-bottom: 10px; display: block; }
+  .input-row { display: flex; gap: 10px; }
+  .topic-input { flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; font-size: 15px; color: var(--text); outline: none; font-family: inherit; }
+  .topic-input:focus { border-color: var(--accent); }
+  .topic-input::placeholder { color: var(--muted); }
+  .btn-gen { background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #fff; border: none; border-radius: 8px; padding: 12px 28px; font-size: 15px; font-weight: 600; cursor: pointer; font-family: inherit; white-space: nowrap; transition: opacity .2s, transform .1s; }
+  .btn-gen:hover { opacity: .9; }
+  .btn-gen:active { transform: scale(.98); }
+  .btn-gen:disabled { opacity: .4; cursor: not-allowed; }
+  .examples { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 7px; }
+  .chip { background: var(--surface2); border: 1px solid var(--border); border-radius: 20px; padding: 5px 13px; font-size: 12px; color: var(--muted); cursor: pointer; transition: all .15s; user-select: none; }
+  .chip:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* Steps */
+  .steps-track { display: flex; gap: 6px; margin-bottom: 24px; flex-wrap: wrap; }
+  .step-pill { flex: 1; min-width: 110px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; font-size: 11px; color: var(--muted); transition: all .25s; display: flex; align-items: center; gap: 8px; }
+  .step-pill.active { border-color: var(--accent); color: var(--text); background: rgba(91,127,255,.08); }
+  .step-pill.done { border-color: var(--green); color: var(--green); background: rgba(62,207,142,.06); }
+  .s-icon { width: 17px; height: 17px; border-radius: 50%; border: 1.5px solid currentColor; display: flex; align-items: center; justify-content: center; font-size: 9px; flex-shrink: 0; }
+  .step-pill.active .s-icon { background: var(--accent); border-color: var(--accent); animation: pulse 1.2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1}50%{opacity:.4} }
+  .s-txt { line-height: 1.3; }
+  .s-name { font-weight: 600; }
+  .s-desc { font-size: 10px; opacity: .7; }
+
+  /* Output */
+  .output-area { display: none; }
+  .output-area.visible { display: block; }
+  .output-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); overflow: hidden; }
+  .output-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; border-bottom: 1px solid var(--border); background: var(--surface2); flex-wrap: wrap; gap: 10px; }
+  .out-title { font-size: 13px; font-weight: 600; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+  .sdot { width: 6px; height: 6px; border-radius: 50%; background: var(--yellow); animation: blink 1s infinite; }
+  .sdot.done { background: var(--green); animation: none; }
+  @keyframes blink { 0%,100%{opacity:1}50%{opacity:.25} }
+  .out-actions { display: flex; gap: 8px; }
+  .btn-act { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 6px 14px; font-size: 12px; color: var(--muted); cursor: pointer; font-family: inherit; transition: all .15s; }
+  .btn-act:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-act.primary { background: var(--green); color: #000; border-color: var(--green); font-weight: 600; }
+  .btn-act.primary:hover { opacity: .85; }
+
+  /* Tabs */
+  .tabs { display: flex; border-bottom: 1px solid var(--border); }
+  .tab { padding: 9px 18px; font-size: 13px; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; user-select: none; }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab-pane { display: none; }
+  .tab-pane.active { display: block; }
+
+  /* Rendered */
+  .rendered { padding: 28px; font-size: 15px; line-height: 1.85; max-height: 680px; overflow-y: auto; }
+  .rendered::-webkit-scrollbar { width: 5px; }
+  .rendered::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  .rendered h3 { font-size: 17px; font-weight: 700; margin: 24px 0 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+  .rendered p { margin-bottom: 14px; color: #c8cde8; }
+  .rendered strong { color: var(--text); font-weight: 600; }
+  .rendered ul,.rendered ol { margin: 10px 0 14px 20px; color: #c8cde8; }
+  .rendered li { margin-bottom: 5px; }
+  .rendered hr { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+  .rendered em { color: var(--muted); font-style: italic; }
+
+  /* Raw */
+  .raw-content { padding: 24px; font-size: 14px; line-height: 1.75; max-height: 680px; overflow-y: auto; white-space: pre-wrap; word-break: break-word; color: #c8cde8; font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+  .raw-content::-webkit-scrollbar { width: 5px; }
+  .raw-content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  /* Logs */
+  .step-logs { padding: 16px 20px; display: flex; flex-direction: column; gap: 8px; }
+  .slog { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 9px 14px; font-size: 12px; color: var(--muted); display: flex; gap: 10px; }
+  .slog.ok { border-color: rgba(62,207,142,.3); color: var(--green); }
+  .slog-icon { flex-shrink: 0; }
+
+  /* Char count */
+  .char-count { text-align: right; font-size: 12px; color: var(--muted); padding: 8px 20px; border-top: 1px solid var(--border); }
+
+  /* Error */
+  .error-box { background: rgba(255,84,112,.07); border: 1px solid rgba(255,84,112,.3); border-radius: 8px; padding: 14px 18px; color: var(--red); font-size: 14px; margin-bottom: 18px; display: none; }
+  .error-box.visible { display: block; }
+
+  /* Help */
+  .help-link { font-size: 12px; color: var(--muted); text-align: center; margin-top: 16px; }
+  .help-link a { color: var(--accent); text-decoration: none; }
+
+  @media(max-width:600px) {
+    .input-row { flex-direction: column; }
+    .steps-track { gap: 4px; }
+    .step-pill { min-width: 80px; font-size: 10px; }
+    .apikey-card { flex-direction: column; align-items: stretch; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <div class="logo"><div class="logo-dot"></div>intrelocations.ru</div>
+    <div class="badge">Фреймворк БАРСУК · 6 шагов · Claude AI</div>
+    <h1>Генератор статей для Яндекс.Дзен</h1>
+    <p class="subtitle">Введите тему — получите готовую статью для ПромоСтраниц</p>
+  </div>
+
+  <!-- API Key -->
+  <div class="apikey-card" id="apikeyCard">
+    <label for="apiKeyInput">🔑 Anthropic API Key</label>
+    <input type="password" id="apiKeyInput" placeholder="sk-ant-api03-..." autocomplete="off" />
+    <button class="btn-save" onclick="saveKey()">Сохранить</button>
+    <span class="key-status" id="keyStatus">✓ Ключ сохранён</span>
+  </div>
+
+  <!-- Topic input -->
+  <div class="input-card">
+    <label class="input-label" for="topicInput">Тема статьи</label>
+    <div class="input-row">
+      <input type="text" id="topicInput" class="topic-input"
+        placeholder="Например: как получить ВНЖ в Сербии в 2025 году" maxlength="200" />
+      <button class="btn-gen" id="genBtn" onclick="startGen()">Написать статью</button>
+    </div>
+    <div class="examples">
+      <span class="chip" onclick="useTopic(this)">Как переехать в Грузию и не пожалеть</span>
+      <span class="chip" onclick="useTopic(this)">ВНЖ в Европе: с чего начать</span>
+      <span class="chip" onclick="useTopic(this)">5 стран для переезда с детьми</span>
+      <span class="chip" onclick="useTopic(this)">Почему переезд в Дубай сложнее, чем кажется</span>
+      <span class="chip" onclick="useTopic(this)">Как найти квартиру за рубежом дистанционно</span>
+      <span class="chip" onclick="useTopic(this)">Чек-лист переезда за границу</span>
+    </div>
+  </div>
+
+  <div class="error-box" id="errBox"></div>
+
+  <!-- Steps track -->
+  <div class="steps-track">
+    <div class="step-pill" id="sp-brief"><div class="s-icon"></div><div class="s-txt"><div class="s-name">1. Брифуем</div><div class="s-desc">Контекст и роль</div></div></div>
+    <div class="step-pill" id="sp-focus"><div class="s-icon"></div><div class="s-txt"><div class="s-name">2. Акценты</div><div class="s-desc">Стиль и правила</div></div></div>
+    <div class="step-pill" id="sp-theme"><div class="s-icon"></div><div class="s-txt"><div class="s-name">3. Тема</div><div class="s-desc">Структура статьи</div></div></div>
+    <div class="step-pill" id="sp-draft"><div class="s-icon"></div><div class="s-txt"><div class="s-name">4. Черновик</div><div class="s-desc">Полный текст</div></div></div>
+    <div class="step-pill" id="sp-refine"><div class="s-icon"></div><div class="s-txt"><div class="s-name">5. Детали</div><div class="s-desc">Улучшение</div></div></div>
+    <div class="step-pill" id="sp-final"><div class="s-icon"></div><div class="s-txt"><div class="s-name">6. Редактура</div><div class="s-desc">Финал</div></div></div>
+  </div>
+
+  <!-- Output -->
+  <div class="output-area" id="outArea">
+    <div class="output-card">
+      <div class="output-header">
+        <div class="out-title">
+          <div class="sdot" id="sdot"></div>
+          <span id="statusTxt">Генерация...</span>
+        </div>
+        <div class="out-actions" id="outActions" style="display:none">
+          <button class="btn-act" onclick="copyRaw()">Копировать текст</button>
+          <button class="btn-act primary" onclick="copyDzen()">Готово для Дзена</button>
+        </div>
+      </div>
+      <div class="tabs" id="tabsRow" style="display:none">
+        <div class="tab active" onclick="switchTab(event,'rendered')">Предпросмотр</div>
+        <div class="tab" onclick="switchTab(event,'raw')">Исходник</div>
+        <div class="tab" onclick="switchTab(event,'logs')">Шаги</div>
+      </div>
+      <div class="tab-pane active" id="tp-rendered"><div class="rendered" id="renderedEl"></div></div>
+      <div class="tab-pane" id="tp-raw"><div class="raw-content" id="rawEl"></div></div>
+      <div class="tab-pane" id="tp-logs"><div class="step-logs" id="logsEl"></div></div>
+      <div class="char-count" id="charCount"></div>
+    </div>
+  </div>
+
+  <div class="help-link">Нужен API-ключ? <a href="https://console.anthropic.com/settings/keys" target="_blank">console.anthropic.com</a></div>
+</div>
+
+<script>
+// ─── Site profile ────────────────────────────────────────────────────────────
+const SITE = {
+  name: 'intrelocations.ru',
+  brand: 'IntRelocations',
+  desc: 'Сервис помощи с международным переездом: визы, документы, поиск жилья, адаптация',
+  audience: 'Люди из России и СНГ, которые хотят переехать за рубеж или уже переехали',
+  pains: [
+    'Не знают, с чего начать переезд',
+    'Боятся сложной бюрократии и оформления документов',
+    'Не понимают, как найти жильё и работу за рубежом',
+    'Переживают из-за адаптации в новой стране',
+    'Запутались в визовых требованиях',
+  ],
+  services: [
+    'Помощь с визами и видами на жительство',
+    'Консультации по переезду',
+    'Помощь с документами и легализацией',
+    'Поиск жилья за рубежом',
+    'Поддержка при адаптации',
+  ],
+};
+
+// ─── Prompts ──────────────────────────────────────────────────────────────────
+function pBrief(topic) {
+  return `Представь, что ты копирайтер — автор рекламных статей для Яндекс.Дзен (ПромоСтраницы).
+Твоя задача — написать рекламную статью на тему: «${topic}» для сайта ${SITE.name}.
+
+Изучи информацию о компании:
+
+**Бренд:** ${SITE.brand} — ${SITE.desc}
+
+**Услуги:**
+${SITE.services.map(s=>'- '+s).join('\n')}
+
+**Аудитория:** ${SITE.audience}
+
+**Боли аудитории:**
+${SITE.pains.map(p=>'- '+p).join('\n')}
+
+**Тон:** дружелюбный, поддерживающий, экспертный — как советует опытный друг, уже переехавший за рубеж.
+
+Пока ничего не пиши — просто изучи и подтверди одной фразой.`;
+}
+
+function pFocus() {
+  return `Отлично! Запомни правила написания статьи, пока ничего не пиши.
+
+1. **Один раздел — одна мысль.**
+2. **Простой язык** — как пишет опытный друг, а не официальный сайт. Никакого официоза.
+3. **Жизненные сценарии** в каждом блоке — ситуации, в которых читатель узнаёт себя.
+4. **Без давления на читателя** — описывай пользу ${SITE.brand} без навязчивости.
+5. **Пиши от лица бренда** ${SITE.brand}, используй «мы» и «наши клиенты».
+6. **Запрещено:** агрессивные призывы купить, политика, гарантии по визам.
+7. **Формат для Дзена:** заголовки блоков через ###, жирный текст для ключевых мыслей. Длина 2500–4000 символов.
+
+Подтверди одной фразой.`;
+}
+
+function pTheme(topic) {
+  return `Разработай структуру статьи на тему «${topic}».
+
+Формат:
+— **Заголовок** (до 56 символов, без восклицательного знака, с зацепкой — болью или мечтой читателя о переезде)
+— **Вступление** (1 абзац — о чём статья и зачем читать)
+— **Блоки статьи** (минимум 5 штук; каждый — название + 1 предложение о содержании)
+— **Заключение** (чем закончим, какой призыв к действию)`;
+}
+
+function pDraft(topic) {
+  return `Напиши полный черновик статьи «${topic}» по утверждённой структуре.
+
+Порядок:
+1. **Лид-абзац** — зайди с проблемы или эмоции читателя, думающего о переезде.
+2. **Каждый блок** отдельно: заголовок (###), жизненный сценарий, польза от ${SITE.brand}.
+3. **Призыв к действию** в конце — мягко, одно конкретное действие, жирным шрифтом.
+4. **10 вариантов заголовков** разных структур (с цифрой, вопросом, глаголом, с двоеточием).
+
+Пиши живо, с реальными деталями из жизни людей, переезжающих за рубеж. Соблюдай все правила.`;
+}
+
+function pRefine() {
+  return `Улучши черновик:
+
+1. Все абстрактные слова («качественный», «надёжный», «лучший») → замени на конкретику с примерами.
+2. Проверь каждый блок: есть ли жизненный сценарий? Если нет — добавь.
+3. Добавь детали, цифры, реальные ситуации из опыта людей, переезжающих за рубеж.
+4. Убери канцеляризмы: «является», «данный», «осуществляет», «в целях», «в рамках».
+5. Призыв к действию — проверь, что мягкий и конкретный.
+
+Выдай улучшенную версию полностью.`;
+}
+
+function pFinal() {
+  return `Финальная редактура. Выдай готовую статью для Яндекс.Дзен:
+
+1. Исправь орфографию и пунктуацию.
+2. Заголовки блоков — через ###.
+3. Ключевые мысли — **жирным**.
+4. Абзацы короткие (2–4 предложения).
+5. В самом конце добавь блок:
+
+---
+**📋 ГОТОВО ДЛЯ ДЗЕНА**
+**Рекомендуемый заголовок:** [лучший из 10 вариантов]
+**Объём:** [количество] символов
+**Аудитория:** ${SITE.audience}
+---
+
+Выдай финальный текст полностью.`;
+}
+
+// ─── State ────────────────────────────────────────────────────────────────────
+let finalText = '';
+let messages = [];
+
+// ─── API key ──────────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  const saved = localStorage.getItem('anthropic_api_key');
+  if (saved) {
+    document.getElementById('apiKeyInput').value = saved;
+    document.getElementById('keyStatus').classList.add('visible');
+  }
+  document.getElementById('topicInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') startGen();
+  });
+});
+
+function saveKey() {
+  const k = document.getElementById('apiKeyInput').value.trim();
+  if (!k) return;
+  localStorage.setItem('anthropic_api_key', k);
+  document.getElementById('keyStatus').classList.add('visible');
+  setTimeout(() => document.getElementById('keyStatus').classList.remove('visible'), 3000);
+}
+
+function useTopic(el) {
+  document.getElementById('topicInput').value = el.textContent.trim();
+}
+
+// ─── Step helpers ─────────────────────────────────────────────────────────────
+function setStep(id, state) {
+  const el = document.getElementById('sp-' + id);
+  if (!el) return;
+  el.classList.remove('active', 'done');
+  if (state) el.classList.add(state);
+}
+
+function addLog(id, text) {
+  const el = document.createElement('div');
+  el.className = 'slog';
+  el.id = 'log-' + id;
+  el.innerHTML = `<span class="slog-icon">⋯</span><span>${text}</span>`;
+  document.getElementById('logsEl').appendChild(el);
+}
+
+function doneLog(id, text) {
+  const el = document.getElementById('log-' + id);
+  if (el) { el.className = 'slog ok'; el.innerHTML = `<span class="slog-icon">✓</span><span>${text}</span>`; }
+}
+
+function switchTab(e, name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-pane').forEach(t => t.classList.remove('active'));
+  e.target.classList.add('active');
+  document.getElementById('tp-' + name).classList.add('active');
+}
+
+// ─── Markdown renderer ────────────────────────────────────────────────────────
+function md(text) {
+  return text
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/^### (.+)$/gm,'<h3>$1</h3>')
+    .replace(/^## (.+)$/gm,'<h3>$1</h3>')
+    .replace(/^# (.+)$/gm,'<h3>$1</h3>')
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g,'<em>$1</em>')
+    .replace(/^---$/gm,'<hr>')
+    .replace(/^[-•] (.+)$/gm,'<li>$1</li>')
+    .replace(/(<li>[^]*?<\/li>\n?)+/g, m=>`<ul>${m}</ul>`)
+    .split(/\n\n+/)
+    .map(p => p.startsWith('<') ? p : `<p>${p.replace(/\n/g,'<br>')}</p>`)
+    .join('\n');
+}
+
+// ─── Core: call Claude with streaming ────────────────────────────────────────
+async function callClaude(userMsg, apiKey, onToken) {
+  messages.push({ role: 'user', content: userMsg });
+
+  const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify({
+      model: 'claude-opus-4-7',
+      max_tokens: 4096,
+      stream: true,
+      messages,
+    }),
+  });
+
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({}));
+    throw new Error(err?.error?.message || `HTTP ${resp.status}`);
+  }
+
+  const reader = resp.body.getReader();
+  const dec = new TextDecoder();
+  let buf = '', full = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += dec.decode(value, { stream: true });
+    const lines = buf.split('\n');
+    buf = lines.pop();
+    for (const line of lines) {
+      if (!line.startsWith('data: ')) continue;
+      const raw = line.slice(6).trim();
+      if (raw === '[DONE]') continue;
+      try {
+        const ev = JSON.parse(raw);
+        if (ev.type === 'content_block_delta' && ev.delta?.type === 'text_delta') {
+          full += ev.delta.text;
+          onToken(ev.delta.text);
+        }
+      } catch {}
+    }
+  }
+
+  messages.push({ role: 'assistant', content: full });
+  return full;
+}
+
+// ─── Main generation flow ─────────────────────────────────────────────────────
+async function startGen() {
+  const topic = document.getElementById('topicInput').value.trim();
+  const apiKey = localStorage.getItem('anthropic_api_key') || document.getElementById('apiKeyInput').value.trim();
+
+  if (!topic) { document.getElementById('topicInput').focus(); return; }
+  if (!apiKey) {
+    showErr('Сначала введите и сохраните Anthropic API Key.');
+    return;
+  }
+
+  const btn = document.getElementById('genBtn');
+  btn.disabled = true;
+  btn.textContent = 'Генерирую...';
+  document.getElementById('errBox').classList.remove('visible');
+  document.getElementById('outArea').classList.add('visible');
+  document.getElementById('outActions').style.display = 'none';
+  document.getElementById('tabsRow').style.display = 'none';
+  document.getElementById('sdot').classList.remove('done');
+  document.getElementById('statusTxt').textContent = 'Генерация...';
+  document.getElementById('renderedEl').innerHTML = '';
+  document.getElementById('rawEl').textContent = '';
+  document.getElementById('logsEl').innerHTML = '';
+  document.getElementById('charCount').textContent = '';
+  finalText = '';
+  messages = [];
+
+  // Reset step pills
+  ['brief','focus','theme','draft','refine','final'].forEach(id => setStep(id, null));
+
+  // Switch to preview tab
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tab-pane').forEach(t=>t.classList.remove('active'));
+  document.querySelector('.tab').classList.add('active');
+  document.getElementById('tp-rendered').classList.add('active');
+
+  try {
+    const steps = [
+      { id: 'brief', prompt: () => pBrief(topic), label: 'Бриф — контекст компании', stream: false },
+      { id: 'focus', prompt: () => pFocus(),       label: 'Акценты — правила стиля',  stream: false },
+      { id: 'theme', prompt: () => pTheme(topic),  label: 'Структура статьи',          stream: true  },
+      { id: 'draft', prompt: () => pDraft(topic),  label: 'Черновик',                  stream: true  },
+      { id: 'refine', prompt: () => pRefine(),     label: 'Улучшение деталей',         stream: true  },
+      { id: 'final', prompt: () => pFinal(),       label: 'Финальная редактура',       stream: true  },
+    ];
+
+    for (const step of steps) {
+      setStep(step.id, 'active');
+      addLog(step.id, step.label + '…');
+      document.getElementById('statusTxt').textContent = step.label + '…';
+
+      if (step.stream) {
+        finalText = '';
+        await callClaude(step.prompt(), apiKey, token => {
+          finalText += token;
+          if (step.id === 'final') {
+            document.getElementById('renderedEl').innerHTML = md(finalText);
+          }
+          document.getElementById('rawEl').textContent = finalText;
+        });
+      } else {
+        await callClaude(step.prompt(), apiKey, () => {});
+      }
+
+      setStep(step.id, 'done');
+      doneLog(step.id, step.label + ' — готово');
+    }
+
+    // Done
+    document.getElementById('sdot').classList.add('done');
+    document.getElementById('statusTxt').textContent = 'Статья готова';
+    document.getElementById('outActions').style.display = 'flex';
+    document.getElementById('tabsRow').style.display = 'flex';
+    const total = finalText.length;
+    const nospace = finalText.replace(/\s/g,'').length;
+    document.getElementById('charCount').textContent =
+      `${total.toLocaleString('ru')} символов с пробелами · ${nospace.toLocaleString('ru')} без пробелов`;
+
+  } catch (err) {
+    showErr('Ошибка: ' + err.message);
+    document.getElementById('outArea').classList.remove('visible');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Написать статью';
+  }
+}
+
+function showErr(msg) {
+  const el = document.getElementById('errBox');
+  el.textContent = msg;
+  el.classList.add('visible');
+}
+
+function copyRaw() {
+  navigator.clipboard.writeText(finalText).then(() => {
+    const b = event.target;
+    b.textContent = 'Скопировано!';
+    setTimeout(() => b.textContent = 'Копировать текст', 2000);
+  });
+}
+
+function copyDzen() {
+  const clean = finalText.replace(/^#{1,3} /gm,'').trim();
+  navigator.clipboard.writeText(clean).then(() => {
+    const b = event.target;
+    b.textContent = 'Скопировано!';
+    setTimeout(() => b.textContent = 'Готово для Дзена', 2000);
+  });
+}
+</script>
+</body>
+</html>
