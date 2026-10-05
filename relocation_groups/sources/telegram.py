@@ -49,7 +49,7 @@ class TelegramSource:
                 continue  # только публичные группы/каналы
             g = Group(
                 platform="telegram",
-                ext_id=str(chat.id),
+                ext_id=chat.username.lower(),
                 title=chat.title or "",
                 url=f"https://t.me/{chat.username}",
                 members=getattr(chat, "participants_count", None),

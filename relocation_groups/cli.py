@@ -22,6 +22,14 @@ async def collect(args, queries: list[str]) -> list[Group]:
     found: list[Group] = []
     platforms = set(args.platform)
 
+    if args.no_api:
+        from .sources.web import WebTelegramSource
+        web = WebTelegramSource(check_activity=True)
+        for q in queries:
+            found += await asyncio.to_thread(web.search, q, args.limit)
+            print(f"[web] {q}", file=sys.stderr)
+        return found
+
     if "vk" in platforms:
         token = _env("VK_TOKEN")
         if not token:
@@ -114,6 +122,8 @@ def main(argv: list[str] | None = None) -> None:
     s.add_argument("--max-inactive-days", type=int, default=60)
     s.add_argument("--min-relevance", type=float, default=1)
     s.add_argument("--only-country", choices=list(COUNTRIES))
+    s.add_argument("--no-api", action="store_true",
+                   help="Telegram без ключей: поисковик + публичные страницы t.me")
     s.add_argument("--check-activity", action="store_true",
                    help="VK: проверять дату последнего поста (медленнее)")
     s.add_argument("--top", type=int, default=50)
