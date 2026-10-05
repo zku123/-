@@ -53,3 +53,22 @@ class Storage:
         sql += " ORDER BY score DESC LIMIT ?"
         args.append(limit)
         return self.db.execute(sql, args).fetchall()
+
+    def country_counts(self) -> dict[str, int]:
+        rows = self.db.execute(
+            "SELECT country, COUNT(*) n FROM groups WHERE country IS NOT NULL "
+            "GROUP BY country"
+        ).fetchall()
+        return {r["country"]: r["n"] for r in rows}
+
+    def page(self, country: str | None, limit: int, offset: int = 0):
+        """Страница групп, отсортированных по score; country=None — все."""
+        sql, args = "SELECT * FROM groups", []
+        if country:
+            sql += " WHERE country=?"
+            args.append(country)
+        sql += " ORDER BY score DESC LIMIT ? OFFSET ?"
+        args += [limit, offset]
+        total_sql = "SELECT COUNT(*) FROM groups" + (" WHERE country=?" if country else "")
+        total = self.db.execute(total_sql, [country] if country else []).fetchone()[0]
+        return self.db.execute(sql, args).fetchall(), total

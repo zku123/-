@@ -80,6 +80,14 @@ def cmd_export(args) -> None:
     print(f"Экспортировано {len(rows)} → {args.out}")
 
 
+def cmd_bot(args) -> None:
+    token = _env("BOT_TOKEN")
+    if not token:
+        sys.exit("Не задан BOT_TOKEN (получить у @BotFather)")
+    from .bot import Bot
+    Bot(token, args.db).run()
+
+
 def print_groups(items, rows_mode: bool = False) -> None:
     for it in items:
         get = (lambda k: it[k]) if rows_mode else (lambda k: getattr(it, k))
@@ -120,6 +128,9 @@ def main(argv: list[str] | None = None) -> None:
     ex.add_argument("--out", default="groups.csv")
     ex.add_argument("--only-country", choices=list(COUNTRIES))
     ex.set_defaults(func=cmd_export)
+
+    b = sub.add_parser("bot", help="запустить Telegram-бота с фильтром по стране")
+    b.set_defaults(func=cmd_bot)
 
     args = p.parse_args(argv)
     args.func(args)

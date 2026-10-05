@@ -27,6 +27,16 @@ python -m relocation_groups show --only-country Грузия   # лучшие и
 python -m relocation_groups export --out groups.csv      # выгрузка в CSV
 ```
 
+## Telegram-бот
+Бот показывает группы из `groups.db` с фильтром по стране (кнопки, пагинация по 8 штук).
+```bash
+# 1. создать бота у @BotFather, положить токен в BOT_TOKEN
+# 2. наполнить базу командой search
+export BOT_TOKEN=...
+python -m relocation_groups bot
+```
+Команды: `/start` (список стран с числом групп), `/top` (лучшие по всем странам). Бот читает базу при каждом запросе, поэтому новые результаты `search` появляются без перезапуска.
+
 ## Как это работает
 1. `queries.py` — запросы «ключевое слово × страна».
 2. `sources/` — коллекторы Telegram (Telethon) и VK (`groups.search`).
