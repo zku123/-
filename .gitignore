@@ -1,0 +1,6 @@
+__pycache__/
+*.session
+*.db
+*.csv
+.env
+.pytest_cache/
